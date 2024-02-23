@@ -1,20 +1,59 @@
-import pandas as pd
+from openpyxl import load_workbook, Workbook
+from openpyxl.utils import get_column_letter
+from copy import copy
 
-def merge_xlsx(file_list, output_file):
-    # 파일 목록에서 DataFrame을 담을 리스트 생성
-    df_list = []
 
-    for file in file_list:
-        # 파일 목록에서 하나씩 파일을 가져와 DataFrame 형식으로 저장
-        file_df = pd.read_excel(file)
-        df_list.append(file_df)
+def copy_sheet_data(source_sheet, target_sheet):
+    # 병합된 셀 정보 복사
+    target_sheet.merged_cells = copy(source_sheet.merged_cells)
 
-    # pd.concat() 함수를 사용하여 데이터프레임들을 병합
-    merged_df = pd.concat(df_list, ignore_index=True)
+    # 각 열의 넓이를 복사
+    for col_letter, column_dimensions in source_sheet.column_dimensions.items():
+        target_sheet.column_dimensions[col_letter].width = column_dimensions.width
 
-    # 결과를 Excel 파일로 저장
-    merged_df.to_excel(output_file, index=False)
+    # 각 행의 높이를 복사
+    for row_letter, row_dimensions in source_sheet.row_dimensions.items():
+        target_sheet.row_dimensions[row_letter].height = row_dimensions.height
 
-# 사용 예시
-file_list = ['xlsx_sample/test1.xlsx', 'xlsx_sample/test2.xlsx']
-merge_xlsx(file_list, 'xlsx_sample/output.xlsx')
+    # 각 셀의 데이터 및 스타일 복사
+    for row in source_sheet.iter_rows(min_row=1, max_row=source_sheet.max_row, min_col=1,
+                                      max_col=source_sheet.max_column):
+        for cell in row:
+            # 새로운 셀 생성
+            new_cell = target_sheet[get_column_letter(cell.column) + str(cell.row)]
+
+            # 셀 데이터 복사
+            new_cell.value = cell.value
+
+            # 셀 스타일 복사
+            new_cell.font = copy(cell.font)
+            new_cell.border = copy(cell.border)
+            new_cell.fill = copy(cell.fill)
+            new_cell.number_format = copy(cell.number_format)
+            new_cell.protection = copy(cell.protection)
+            new_cell.alignment = copy(cell.alignment)
+
+
+# 원본 워크북 로드
+wb = load_workbook(filename='xlsx_sample/test2.xlsx')
+ws = wb["참여학사조직"]
+
+twb = load_workbook(filename='xlsx_sample/test1.xlsx')
+tws = twb["창원대"]
+
+# 새로운 워크북 생성
+newwb = Workbook()
+newwb.remove(newwb.active)
+newws = newwb.create_sheet("Page1")
+newws2 = newwb.create_sheet("Page2")
+
+# 데이터 및 스타일 복사
+copy_sheet_data(ws, newws)
+copy_sheet_data(tws, newws2)
+
+# 새로운 워크북 저장
+newwb.save('xlsx_sample/newEXCEL.xlsx')
+
+# 원본 워크북과 새로운 워크북 닫기
+wb.close()
+newwb.close()

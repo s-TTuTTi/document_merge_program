@@ -53,7 +53,7 @@ copy_sheet_data(ws, newws)
 copy_sheet_data(tws, newws, start_row=ws.max_row+2)
 
 # 새로운 워크북 저장
-newwb.save('newEXCEL.xlsx')
+newwb.save('xlsx_sample/newEXCEL.xlsx')
 
 # 원본 워크북과 새로운 워크북 닫기
 wb.close()
