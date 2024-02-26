@@ -1,5 +1,6 @@
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
+from openpyxl.utils.cell import coordinate_from_string
 from copy import copy
 
 
@@ -7,33 +8,38 @@ def copy_sheet_data(source_sheet, target_sheet, start_row=1):
 
     # 만약 start_row가 1이 아니면 merged_cells를 조정
     if start_row != 1:
-        target_merged_cells = []
-
         for merged_cell in source_sheet.merged_cells:
-            merged_cell_range = merged_cell.coord
-
-            # 문자열에서 숫자 부분 추출
-            column, row = openpyxl.utils.cell.coordinate_from_string(merged_cell_range)
+            range = merged_cell.bounds
 
             # start_row를 더해서 새로운 행 번호 생성
-            new_row = row + start_row - 1
+            new_first_row = range[1] + start_row - 1
+            new_last_row = range[3] + start_row - 1
 
             # 새로운 셀 좌표 문자열 생성
-            new_merged_cell_range = f"{openpyxl.utils.cell.get_column_letter(column)}{new_row}"
+            new_merged_cell_range = get_column_letter(range[0]) + str(new_first_row) + ":" + get_column_letter(range[2]) + str(new_last_row)
 
             # target_sheet에 추가
             target_sheet.merged_cells.add(new_merged_cell_range)
+
+            # 각 열의 넓이를 복사
+            for col_letter, column_dimensions in source_sheet.column_dimensions.items():
+                if target_sheet.column_dimensions[col_letter].width < column_dimensions.width:
+                    target_sheet.column_dimensions[col_letter].width = column_dimensions.width
+
+            # 각 행의 높이를 복사
+            for row_letter, row_dimensions in source_sheet.row_dimensions.items():
+                target_sheet.row_dimensions[row_letter].height = row_dimensions.height
     else:
         # 병합된 셀 정보 복사
         target_sheet.merged_cells = source_sheet.merged_cells
 
-    # 각 열의 넓이를 복사
-    for col_letter, column_dimensions in source_sheet.column_dimensions.items():
-        target_sheet.column_dimensions[col_letter].width = column_dimensions.width
+        # 각 열의 넓이를 복사
+        for col_letter, column_dimensions in source_sheet.column_dimensions.items():
+            target_sheet.column_dimensions[col_letter].width = column_dimensions.width
 
-    # 각 행의 높이를 복사
-    for row_letter, row_dimensions in source_sheet.row_dimensions.items():
-        target_sheet.row_dimensions[row_letter].height = row_dimensions.height
+        # 각 행의 높이를 복사
+        for row_letter, row_dimensions in source_sheet.row_dimensions.items():
+            target_sheet.row_dimensions[row_letter].height = row_dimensions.height
 
     # 각 셀의 데이터 및 스타일 복사
     for row in source_sheet.iter_rows(min_row=1, max_row=source_sheet.max_row, min_col=1,
@@ -56,10 +62,10 @@ def copy_sheet_data(source_sheet, target_sheet, start_row=1):
 
 def merge_xlsx_multi_sheet():
     # 원본 워크북 로드
-    wb = load_workbook(filename='xlsx_sample/test2.xlsx')
+    wb = load_workbook(filename="xlsx_sample/test2.xlsx")
     ws = wb["참여학사조직"]
 
-    twb = load_workbook(filename='xlsx_sample/test1.xlsx')
+    twb = load_workbook(filename="xlsx_sample/test1.xlsx")
     tws = twb["창원대"]
 
     # 새로운 워크북 생성
@@ -73,7 +79,7 @@ def merge_xlsx_multi_sheet():
     copy_sheet_data(tws, newws2)
 
     # 새로운 워크북 저장
-    newwb.save('xlsx_sample/output_multi_sheet.xlsx')
+    newwb.save("xlsx_sample/output_multi_sheet.xlsx")
 
     # 원본 워크북과 새로운 워크북 닫기
     wb.close()
@@ -81,10 +87,10 @@ def merge_xlsx_multi_sheet():
 
 def merge_xlsx_single_sheet():
     # 원본 워크북 로드
-    wb = load_workbook(filename='xlsx_sample/test2.xlsx')
+    wb = load_workbook(filename="xlsx_sample/test2.xlsx")
     ws = wb["참여학사조직"]
 
-    twb = load_workbook(filename='xlsx_sample/test1.xlsx')
+    twb = load_workbook(filename="xlsx_sample/test1.xlsx")
     tws = twb["창원대"]
 
     # 새로운 워크북 생성
@@ -97,7 +103,7 @@ def merge_xlsx_single_sheet():
     copy_sheet_data(tws, newws, newws.max_row + 1)
 
     # 새로운 워크북 저장
-    newwb.save('xlsx_sample/output_single_sheet.xlsx')
+    newwb.save("xlsx_sample/output_single_sheet.xlsx")
 
     # 원본 워크북과 새로운 워크북 닫기
     wb.close()
