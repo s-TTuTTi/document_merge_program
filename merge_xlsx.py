@@ -4,11 +4,29 @@ from copy import copy
 
 
 def copy_sheet_data(source_sheet, target_sheet, start_row=1):
-    # 병합된 셀 정보 복사
-    target_sheet.merged_cells = copy(source_sheet.merged_cells)
-    print(target_sheet.merged_cells)
-    target_sheet.merged_cells.add('Z6:Z7')
-    print(target_sheet.merged_cells)
+
+    # 만약 start_row가 1이 아니면 merged_cells를 조정
+    if start_row != 1:
+        target_merged_cells = []
+
+        for merged_cell in source_sheet.merged_cells:
+            merged_cell_range = merged_cell.coord
+
+            # 문자열에서 숫자 부분 추출
+            column, row = openpyxl.utils.cell.coordinate_from_string(merged_cell_range)
+
+            # start_row를 더해서 새로운 행 번호 생성
+            new_row = row + start_row - 1
+
+            # 새로운 셀 좌표 문자열 생성
+            new_merged_cell_range = f"{openpyxl.utils.cell.get_column_letter(column)}{new_row}"
+
+            # target_sheet에 추가
+            target_sheet.merged_cells.add(new_merged_cell_range)
+    else:
+        # 병합된 셀 정보 복사
+        target_sheet.merged_cells = source_sheet.merged_cells
+
     # 각 열의 넓이를 복사
     for col_letter, column_dimensions in source_sheet.column_dimensions.items():
         target_sheet.column_dimensions[col_letter].width = column_dimensions.width
@@ -16,8 +34,8 @@ def copy_sheet_data(source_sheet, target_sheet, start_row=1):
     # 각 행의 높이를 복사
     for row_letter, row_dimensions in source_sheet.row_dimensions.items():
         target_sheet.row_dimensions[row_letter].height = row_dimensions.height
-    # 각 셀의 데이터 및 스타일 복사
 
+    # 각 셀의 데이터 및 스타일 복사
     for row in source_sheet.iter_rows(min_row=1, max_row=source_sheet.max_row, min_col=1,
                                       max_col=source_sheet.max_column):
         for cell in row:
@@ -36,29 +54,54 @@ def copy_sheet_data(source_sheet, target_sheet, start_row=1):
             new_cell.alignment = copy(cell.alignment)
 
 
-# 원본 워크북 로드
-wb = load_workbook(filename='xlsx_sample/test2.xlsx')
-ws = wb["참여학사조직"]
+def merge_xlsx_multi_sheet():
+    # 원본 워크북 로드
+    wb = load_workbook(filename='xlsx_sample/test2.xlsx')
+    ws = wb["참여학사조직"]
 
-twb = load_workbook(filename='xlsx_sample/test1.xlsx')
-tws = twb["창원대"]
+    twb = load_workbook(filename='xlsx_sample/test1.xlsx')
+    tws = twb["창원대"]
 
-# 새로운 워크북 생성
-newwb = Workbook()
-newwb.remove(newwb.active)
-newws = newwb.create_sheet("Page 1")
+    # 새로운 워크북 생성
+    newwb = Workbook()
+    newwb.remove(newwb.active)
+    newws1 = newwb.create_sheet("Page 1")
+    newws2 = newwb.create_sheet("Page 2")
 
-# 데이터 및 스타일 복사
-copy_sheet_data(ws, newws)
-copy_sheet_data(tws, newws, start_row=ws.max_row+2)
+    # 데이터 및 스타일 복사
+    copy_sheet_data(ws, newws1)
+    copy_sheet_data(tws, newws2)
 
-# 새로운 워크북 저장
-newwb.save('xlsx_sample/newEXCEL.xlsx')
+    # 새로운 워크북 저장
+    newwb.save('xlsx_sample/output_multi_sheet.xlsx')
 
-# 원본 워크북과 새로운 워크북 닫기
-wb.close()
-newwb.close()
+    # 원본 워크북과 새로운 워크북 닫기
+    wb.close()
+    newwb.close()
 
-# 원본 워크북과 새로운 워크북 닫기
-wb.close()
-newwb.close()
+def merge_xlsx_single_sheet():
+    # 원본 워크북 로드
+    wb = load_workbook(filename='xlsx_sample/test2.xlsx')
+    ws = wb["참여학사조직"]
+
+    twb = load_workbook(filename='xlsx_sample/test1.xlsx')
+    tws = twb["창원대"]
+
+    # 새로운 워크북 생성
+    newwb = Workbook()
+    newwb.remove(newwb.active)
+    newws = newwb.create_sheet("Page 1")
+
+    # 데이터 및 스타일 복사
+    copy_sheet_data(ws, newws)
+    copy_sheet_data(tws, newws, newws.max_row + 1)
+
+    # 새로운 워크북 저장
+    newwb.save('xlsx_sample/output_single_sheet.xlsx')
+
+    # 원본 워크북과 새로운 워크북 닫기
+    wb.close()
+    newwb.close()
+
+merge_xlsx_multi_sheet()
+merge_xlsx_single_sheet()
