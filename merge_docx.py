@@ -2,6 +2,7 @@ import docx
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.styles import CT_Style
+import xml.etree.ElementTree as ET
 import os
 import random
 
@@ -198,24 +199,38 @@ def handle_styles(merged_doc, sub_doc):
 
 
 def add_page_break(doc):
-    # Create <w:p> element
+    # <w:p> element 생성
     paragraph_element = OxmlElement('w:p')
 
-    # Create <w:r> element
+    # <w:r> element 생성
     run_element = OxmlElement('w:r')
 
-    # Create <w:br w:type="page"/> element
+    # <w:br w:type="page"/> element 생성
     br_element = OxmlElement('w:br')
     br_element.set('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type', 'page')
 
-    # Append <w:br> to <w:r>
+    # <w:r>에 <w:br> append
     run_element.append(br_element)
 
-    # Append <w:r> to <w:p>
+    # <w:p>에 <w:r> append
     paragraph_element.append(run_element)
 
-    # Append <w:p> to the document
+    # body에 <w:p> append
     doc.element.body.append(paragraph_element)
+
+
+def check_page_break(xml_text):
+    root = ET.fromstring(xml_text)
+
+    # 모든 하위 태그 중에서 <w:br w:type="page"> 또는 <Renderpagebreak>를 찾은 후 있을 경우 리턴
+    for child in root.iter():
+        if child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}br' and child.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type') == 'page':
+            return True
+        elif child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}lastRenderedPageBreak':
+            return True
+
+    return False
+
 
 
 def merge_docx(file_list, file_name):
@@ -232,6 +247,8 @@ def merge_docx(file_list, file_name):
 
         # sub_doc_doc의 body 엘리먼트를 merged_doc 파일의 body에 추가
         for element in sub_doc.element.body:
+            if check_page_break(element.xml):
+                print("Page break")
             merged_doc.element.body.append(element)
 
         # 수동으로 페이지 구분선 추가

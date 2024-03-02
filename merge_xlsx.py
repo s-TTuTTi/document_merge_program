@@ -1,6 +1,5 @@
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils import get_column_letter
-from openpyxl.utils.cell import coordinate_from_string
 from copy import copy
 
 
@@ -21,7 +20,7 @@ def copy_sheet_data(source_sheet, target_sheet, start_row=1):
             # target_sheet에 추가
             target_sheet.merged_cells.add(new_merged_cell_range)
 
-            # 각 열의 넓이를 복사
+            # 각 열의 넓이를 복사(두 열의 넓이 중 더 큰 것을 선택)
             for col_letter, column_dimensions in source_sheet.column_dimensions.items():
                 if target_sheet.column_dimensions[col_letter].width < column_dimensions.width:
                     target_sheet.column_dimensions[col_letter].width = column_dimensions.width
@@ -100,7 +99,7 @@ def merge_xlsx_single_sheet():
 
     # 데이터 및 스타일 복사
     copy_sheet_data(ws, newws)
-    copy_sheet_data(tws, newws, newws.max_row + 1)
+    copy_sheet_data(tws, newws, newws.max_row + 2)
 
     # 새로운 워크북 저장
     newwb.save("xlsx_sample/output_single_sheet.xlsx")
