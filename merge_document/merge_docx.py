@@ -1,13 +1,19 @@
 import os
 import random
-import xml.etree.ElementTree as ET
 
+import xml.etree.ElementTree as ET
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.styles import CT_Style
-
+from docx.shared import Pt
 NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 
+from xml.etree.ElementTree import Element, SubElement
+from docx.oxml import ns
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
+
+# 문서에서 모든 하이퍼링크를 제거합니다. 이는 부동 이미지가 있는 문서에서 오염되지 않은 docx 파일을 생성할 수 있게 합니다.
 def handle_numbers(merged_doc, sub):
     # merged_doc의 numbering.xml 파일 가져오기
     try:
@@ -132,31 +138,14 @@ def handle_inlines(merged_doc, sub_doc):
     x_path = '//a:blip'
     # sub_doc 문서의 모든 a:blip 엘리먼트를 blip_list 변수에 저장
     blip_list = sub_doc.element.xpath(x_path)
+    # shapes 파일의 이미지를 모두 들어 있음
 
-    # shapes 변수에는 관심 있는 미디어를 가진 모든 InlineShape 객체가 들어 있음
-    shapes = sub_doc.inline_shapes
+    shapes = sub_doc.inline_shapes.part.package.image_parts._image_parts
 
-    # 각 이미지를 고유한 파일 경로로 저장
     for i in range(len(shapes)):
-
-        # rId를 가져오기
         shape = shapes[i]
-        if shape._inline.graphic.graphicData.pic is not None:
-            rId = shape._inline.graphic.graphicData.pic.blipFill.blip.embed
-        else:
-            # 해당 shape를 제거
-            drawing_element = shape._inline.getparent()
-            drawing_parent = drawing_element.getparent()
-            drawing_parent.remove(drawing_element)
-            continue
-
-        # ImagePart 객체
-        image_part = sub_doc.part.related_parts[rId]
-
-        # Image 객체
+        image_part = shape
         actual_image = image_part.image
-
-        # 이미지의 실제 바이너리 데이터
         image_blob = actual_image.blob
 
         # 고유한 파일 경로 문자열 생성
@@ -180,6 +169,46 @@ def handle_inlines(merged_doc, sub_doc):
         # 이미지 파일 제거
         os.remove(image_path)
 
+
+'''
+    [ 수정 후 ]
+    shapes = sub_doc.inline_shapes.part.package.image_parts._image_parts
+    for i in range(len(shapes)):
+
+        shape = shapes[i]
+        image_part = shape
+        actual_image = image_part.image
+        image_blob = actual_image.blob
+
+        # 고유한 파일 경로 문자열 생성
+        random_id = random.randint(10000, 100000)
+        image_path = 'image' + str(random_id) + '.' + actual_image.ext
+ 
+    [ 수정 전 ]
+    # shapes 변수에는 관심 있는 미디어를 가진 모든 InlineShape 객체가 들어 있음
+    shapes = sub_doc.inline_shapes
+    # 각 이미지를 고유한 파일 경로로 저장
+    for i in range(len(shapes)):
+        # rId를 가져오기
+        shape = shapes[i]
+        if shape._inline.graphic.graphicData.pic is not None:
+            rId = shape._inline.graphic.graphicData.pic.blipFill.blip.embed
+        # else:
+        #     # 해당 shape를 제거
+        #     drawing_element = shape._inline.getparent()
+        #     drawing_parent = drawing_element.getparent()
+        #     drawing_parent.remove(drawing_element)
+        #      continue
+        # ImagePart 객체
+        image_part = sub_doc.part.related_parts[rId]
+        # Image 객체
+        actual_image = image_part.image
+        # 이미지의 실제 바이너리 데이터
+        image_blob = actual_image.blob
+        # 고유한 파일 경로 문자열 생성
+        random_id = random.randint(10000, 100000)
+        image_path = 'image' + str(random_id) + '.' + actual_image.ext
+'''
 
 # sub_doc 문서의 모든 스타일을 merged_doc의 'styles.xml' 파일에 추가하는 함수
 # 이미 존재하는 스타일은 덮어써짐
@@ -226,7 +255,6 @@ def add_page_break(doc):
 
 def check_page_break(xml_text):
     root = ET.fromstring(xml_text)
-
     # 모든 하위 태그 중에서 (<w:br w:type="page"> 또는) <Renderpagebreak>를 찾은 후 있을 경우 리턴
     for child in root.iter():
         #if child.tag == '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}br' and child.get('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}type') == 'page':
@@ -236,14 +264,17 @@ def check_page_break(xml_text):
 
     return False
 
-def merge_docx(file_list, output_file_name):
+
+
+def merge_docx(file_list, file_name):
     merged_doc = Document()
     selected_pages = []
-
     for file in file_list:
         sub_doc = Document(file)
         page_number = 1
-        user_input = input("저장할 페이지 번호를 입력하세요 (여러 페이지일 경우 쉼표로 구분, 전체 페이지를 저장할 경우 엔터키를 누르세요): ")
+
+        load_file = os.path.basename(file)
+        user_input = input(f"{load_file}의 저장할 페이지 번호를 입력하세요 (여러 페이지일 경우 쉼표로 구분, 전체 페이지를 저장할 경우 엔터키를 누르세요): ")
         if user_input:
             selected_pages = [int(num) for num in user_input.split(',')]
             if len(selected_pages) != len(set(selected_pages)):
@@ -251,8 +282,6 @@ def merge_docx(file_list, output_file_name):
         # 원하는 페이지가 없을 경우
         else:
             print("페이지를 저장하지 않았습니다.")
-
-
 
         print(f"{file} 저장 중..")
         # 인라인 이미지 처리
@@ -262,8 +291,19 @@ def merge_docx(file_list, output_file_name):
         # 넘버링 처리
         handle_numbers(merged_doc, sub_doc)
 
-        # sub_doc의 body 엘리먼트를 merged_doc 파일의 body에 추가
+        # sub_doc_doc의 body 엘리먼트를 merged_doc 파일의 body에 추가
         for element in sub_doc.element.body:
+            if check_page_break(element.xml):
+                page_number = page_number + 1
+            if page_number in selected_pages:
+                merged_doc.element.body.append(element)
+            elif not selected_pages:
+                if 'tbl' in element.tag:  # element가 테이블인 경우
+                    print('hi')
+                merged_doc.element.body.append(element)
+    # 모든 단락에 대해 단락 뒤 간격을 0으로 설정
+    for paragraph in merged_doc.paragraphs:
+        paragraph.paragraph_format.space_after = Pt(0)
             # if check_page_break(element.xml):
             #     page_number = page_number + 1
             # if page_number in selected_pages:
@@ -280,4 +320,5 @@ def merge_docx(file_list, output_file_name):
         #add_page_break(merged_doc)
 
     # 문서 저장
-    merged_doc.save(output_file_name)
+    merged_doc.save(file_name)
+
