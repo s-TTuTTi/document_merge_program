@@ -22,3 +22,6 @@ if __name__ == '__main__':
     output_file = file_selector.save_file()
 
     pdf_merger.merge_pdf(input_files=converted_files, output_file=output_file)
+
+    for converted_file in converted_files:
+        os.remove(converted_file)
