@@ -17,7 +17,9 @@ class ToPdfConverter:
 
         doc = word.Documents.Open(doc_file)
 
-        doc.SaveAs(output_file, FileFormat=17)
+        doc_output_file = output_file.replace('/', '\\')
+
+        doc.SaveAs(doc_output_file, FileFormat=17)
 
         doc.Close()
         word.Quit()

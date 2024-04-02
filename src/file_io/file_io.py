@@ -1,16 +1,22 @@
 import tkinter as tk
 from tkinter import filedialog
 
-class FileSelector:
+class FileIO:
     def __init__(self):
         self.root = tk.Tk()
         self.root.withdraw()
 
-    def select_files(self):
-        file_paths = filedialog.askopenfilenames()
+    def open_files(self):
+        file_paths = []
+
+        while True:
+            file_path = filedialog.askopenfilename()
+            if not file_path:
+                break
+            file_paths.append(file_path)
+
         return file_paths
 
-if __name__ == "__main__":
-    file_selector = FileSelector()
-    selected_files = file_selector.select_files()
-    print("Selected files:", selected_files)
+    def save_file(self):
+        file_path = filedialog.asksaveasfilename()
+        return file_path
