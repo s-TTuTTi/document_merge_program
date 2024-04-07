@@ -16,6 +16,8 @@ if __name__ == '__main__':
         converted_file = os.path.join(file_path, f'temp{index}.pdf')
 
         to_pdf_converter.convert_to_pdf(input_file=input_file, output_file=converted_file)
+        if(input_file.endswith('.doc')) or input_file.endswith('.docx'):
+            to_pdf_converter.extract_page(converted_file, input_file)
 
         converted_files.append(converted_file)
 

@@ -18,5 +18,5 @@ class FileIO:
         return file_paths
 
     def save_file(self):
-        file_path = filedialog.asksaveasfilename()
+        file_path = filedialog.asksaveasfilename(defaultextension='.pdf')
         return file_path
