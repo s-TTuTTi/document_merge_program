@@ -262,16 +262,18 @@ class App:
 
     def btn_load_click(self):
         files = self.file_selector.open_files()
+        new_files_count = 0
         for file in files:
             if file.endswith((".docx", ".doc", ".xlsx", ".xls")):
                 self.input_files.append(file)
                 self.listbox.insert(END, os.path.basename(file))
+                new_files_count += 1
             else:
                 self.warning_msg(
                     f"Only Ms Word & Ms Excel files supported\nUnsupported file format : {os.path.basename(file)}")
 
         if self.selected_pages:
-            self.selected_pages.extend([0])
+            self.selected_pages.extend([0] * new_files_count)
         else:
             self.selected_pages = [0] * len(self.input_files)
 
@@ -333,8 +335,15 @@ class App:
 
     # Binding Method ---------------------------------------------------------------------------------------------------
     def is_vaild_input(self, input_value):
-        pattern = r'^([1-9]\d*)(,\s*\d+(-\d+)?)*$'
+        pattern = r'^(\d+)(-\d+)?(,\s*(\d+)(-\d+)?)*$'
         if re.match(pattern, input_value):
+            ranges = input_value.split(',')
+            for range_str in ranges:
+                range_parts = range_str.split('-')
+                if len(range_parts) == 2:
+                    start, end = map(int, range_parts)
+                    if start > end:
+                        return False
             return True
         else:
             return False
@@ -354,21 +363,21 @@ class App:
 
     def order_input_worksheet(self, event):
     # Method of the combo box corresponding to the corresponding function of radio button 3
-
+        print(f"Index : {self.index}")
         sheet_value = self.combo.get()
         print(f"The page entered by the user : {sheet_value}")
 
         # Unlike other widgets, the combo box does not keep the cursor in the list box,
         # so it gets the list box recorded in Radio Box 3 (self.index)
-        if self.index:
-            if sheet_value:
-                self.selected_pages[self.index] = self.combo.get()
-            else:
-                self.selected_pages[self.index] = 0
+
+        if sheet_value:
+            self.selected_pages[self.index] = self.combo.get()
+        else:
+            self.selected_pages[self.index] = 0
 
     def listbox_select(self, event):
         selected_item, index = self.get_selected_item_and_index()
-        if selected_item and index is not None:
+        if selected_item or (index is not None and int(index) > -1):
             self.index = index
             print(f"Current cursor position : {index}")
             if selected_item.endswith('.docx') or selected_item.endswith('.doc'):
@@ -376,9 +385,8 @@ class App:
             elif selected_item.endswith('.xlsx') or selected_item.endswith('.xls'):
                 self.handle_excel_file_selection(index)
             else:
-                self.warning_msg(f"Only Ms Word & Ms Excel files supported\nUnsupported file format : {selected_item}")
-        else:
-            self.warning_msg("Please select a file from the list.")
+                self.warning_msg(f"Only Ms Word & Ms E xcel files supported\nUnsupported file format : {selected_item}")
+
         print(f"Page related array : {self.selected_pages}")
 
     def get_selected_item_and_index(self):
@@ -414,29 +422,26 @@ class App:
         self.label2.pack_forget()
 
         worksheet_names = []
-        if self.selected_pages[index] == 0:
-            self.radio1.select()
-            self.combo.set("-- SELECT --")
-            self.combo.config(state='disabled')
-        else:
-            print("else")
-            try:
-                worksheet_names = self.excel_handler.extract_sheet_names(self.input_files[index])
-                self.combo['values'] = worksheet_names
-                self.combo.config(state="readonly")
-                self.combo.config(state='normal')
-            except Exception as e:
-                print(f"Error: {e}")
-                self.warning_msg("Invalid file format. Only Excel files are supported for worksheets.")
+        self.radio1.select()
+        self.combo.set("-- SELECT --")
+        self.combo.config(state='disabled')
 
-            if self.selected_pages[index] in worksheet_names:
-                print("self.combo.set(self.selected_pages[index])")
-                self.input_text.config(state='normal')
-                self.combo.set(self.selected_pages[index])
-            else:
-                print("self.input_text.config(state='normal')")
-                self.input_text.config(state='normal')
-                self.combo.set("-- SELECT --")
+        try:
+            worksheet_names = self.excel_handler.extract_sheet_names(self.input_files[index])
+            self.combo['values'] = worksheet_names
+        except Exception as e:
+            print(f"Error: {e}")
+            self.warning_msg("Invalid file format. Only Excel files are supported for worksheets.")
+
+
+        if self.selected_pages[index] != 0 or self.selected_pages[index] in worksheet_names:
+            self.radio3.select()
+            self.combo.config(state='normal')
+            self.combo.set(self.selected_pages[index])
+        else:
+            self.radio1.select()
+            self.combo.config(state='disabled')
+            self.combo.set("-- SELECT --")
 
     def run(self):
         self.initialize_ui()
