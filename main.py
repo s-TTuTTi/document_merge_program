@@ -31,13 +31,12 @@ class App:
         self.pdf_merger = merge_pdf.PdfMerger()
 
         # Initialize UI elements
-        self.initialize_ui()
 
     def initialize_ui(self):
         self.create_root_window()
         self.create_left_frame()
         self.create_right_frame()
-        #self.bind_events()
+        self.bind_events()
 
     def create_root_window(self):
         self.root = tk.Tk()
@@ -67,8 +66,8 @@ class App:
         self.labelframe = tk.LabelFrame(parent, text="페이지 선택", relief='solid', bd=1, pady=10)
         self.labelframe.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
 
-        # self.create_radio_buttons(labelframe)
-        # self.create_entry_and_combobox(labelframe)
+        self.create_radio_buttons(self.labelframe)
+        self.create_entry_and_combobox(self.labelframe)
 
     def create_labelframe_child(self, parent, ext):
         if ext == ".docx" or ext == ".doc":
@@ -302,7 +301,9 @@ class App:
         # Initialization
         self.input_text.delete(0, tk.END)
         self.input_text.config(state='disabled')  # input_text 비활성화
+
         self.combo.set("-- SELECT --")
+        self.combo.config(state='disabled')  # input_text 비활성화
         self.selected_pages[self.index] = 0
 
     def radio_button_2(self):
@@ -323,10 +324,9 @@ class App:
         self.radio3.select()
 
         # Initialization
-        self.input_text.config(state='normal')  # input_text 활성화
+        self.combo.config(state='normal')  # input_text 활성화
         if not self.selected_pages:
             self.combo.set(self.selected_pages[self.index])
-            self.radio3.select()
 
         elif self.selected_pages[self.index] == 0:
             self.combo.set("-- SELECT --")
@@ -399,8 +399,10 @@ class App:
         if self.selected_pages[index] == 0:
             self.radio1.select()
             self.input_text.delete(0, tk.END)
+            self.input_text.config(state='disabled')
         else:
             self.radio2.select()
+            self.input_text.config(state='normal')
             self.input_text.delete(0, tk.END)  # 기존 값 삭제
             self.input_text.insert(0, self.selected_pages[index])
 
@@ -412,22 +414,33 @@ class App:
         self.label2.pack_forget()
 
         worksheet_names = []
-        try:
-            worksheet_names = self.excel_handler.extract_sheet_names(self.input_files[index])
-            self.combo['values'] = worksheet_names
-            self.combo.config(state="readonly")
-        except Exception as e:
-            print(f"Error: {e}")
-            self.warning_msg("Invalid file format. Only Excel files are supported for worksheets.")
-
-        if self.selected_pages[index] in worksheet_names:
-            self.combo.set(self.selected_pages[index])
-        else:
+        if self.selected_pages[index] == 0:
+            self.radio1.select()
             self.combo.set("-- SELECT --")
+            self.combo.config(state='disabled')
+        else:
+            print("else")
+            try:
+                worksheet_names = self.excel_handler.extract_sheet_names(self.input_files[index])
+                self.combo['values'] = worksheet_names
+                self.combo.config(state="readonly")
+                self.combo.config(state='normal')
+            except Exception as e:
+                print(f"Error: {e}")
+                self.warning_msg("Invalid file format. Only Excel files are supported for worksheets.")
+
+            if self.selected_pages[index] in worksheet_names:
+                print("self.combo.set(self.selected_pages[index])")
+                self.input_text.config(state='normal')
+                self.combo.set(self.selected_pages[index])
+            else:
+                print("self.input_text.config(state='normal')")
+                self.input_text.config(state='normal')
+                self.combo.set("-- SELECT --")
 
     def run(self):
+        self.initialize_ui()
         self.root.mainloop()
-
 
 if __name__ == '__main__':
     app = App()
