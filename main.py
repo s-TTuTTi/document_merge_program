@@ -1,3 +1,5 @@
+import sys
+
 import src.file_io.file_io as file_io
 import src.convert_document.convert_to_pdf as convert_to_pdf
 import src.handle_document.handle_docx as handle_docx
@@ -69,16 +71,6 @@ class App:
         self.create_radio_buttons(self.labelframe)
         self.create_entry_and_combobox(self.labelframe)
 
-    def create_labelframe_child(self, parent, ext):
-        if ext == ".docx" or ext == ".doc":
-            self.all_radio = tk.Radiobutton(parent, text="ALL")
-            self.part_radio = tk.Radiobutton(parent, text="PART")
-            self.input_text = tk.Entry(parent, width=10, state='disabled')
-
-            self.all_radio.select()
-            self.part_radio.deselect()
-
-
     def create_radio_buttons(self, parent):
         self.var1 = tk.IntVar()
         self.radio1 = tk.Radiobutton(parent, text="ALL", value=1, variable=self.var1, command=self.radio_button_1)
@@ -118,10 +110,16 @@ class App:
         lbl_responsible.grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
         self.entry_responsible.grid(row=2, column=1, padx=5, pady=5)
 
+    def exit_window_x(self):
+        print("프로그램이 종료됩니다.")
+        self.root.destroy()
+        sys.exit()
+
     def bind_events(self):
         self.listbox.bind('<<ListboxSelect>>', self.listbox_select)
         self.input_text.bind("<Return>", self.order_input_page)
         self.combo.bind("<<ComboboxSelected>>", self.order_input_worksheet)
+        self.root.protocol('WM_DELETE_WINDOW', self.exit_window_x)
 
     @staticmethod
     def extract_filename_without_extension(file_path):
@@ -379,7 +377,14 @@ class App:
         selected_item, index = self.get_selected_item_and_index()
         if selected_item or (index is not None and int(index) > -1):
             self.index = index
+            print(selected_item)
             print(f"Current cursor position : {index}")
+            self.radio1.pack_forget()
+            self.radio2.pack_forget()
+            self.radio3.pack_forget()
+            self.input_text.pack_forget()
+            self.label2.pack_forget()
+            self.combo.pack_forget()
             if selected_item.endswith('.docx') or selected_item.endswith('.doc'):
                 self.handle_word_file_selection(index)
             elif selected_item.endswith('.xlsx') or selected_item.endswith('.xls'):
@@ -390,19 +395,18 @@ class App:
         print(f"Page related array : {self.selected_pages}")
 
     def get_selected_item_and_index(self):
-        selected_item = self.listbox.get(tk.ACTIVE)
         selected_indices = self.listbox.curselection()
         if selected_indices:
             index = selected_indices[0]
+            selected_item = self.listbox.get(index)
             return selected_item, index
         return None, None
 
     def handle_word_file_selection(self, index):
+        self.radio1.pack(side=tk.LEFT, padx=5)
         self.radio2.pack(side=tk.LEFT, padx=5)
         self.input_text.pack(side=tk.LEFT, padx=5)
         self.label2.pack(side=tk.LEFT, padx=5)
-        self.combo.pack_forget()
-        self.radio3.pack_forget()
 
         if self.selected_pages[index] == 0:
             self.radio1.select()
@@ -415,11 +419,9 @@ class App:
             self.input_text.insert(0, self.selected_pages[index])
 
     def handle_excel_file_selection(self, index):
+        self.radio1.pack(side=tk.LEFT, padx=5)
         self.radio3.pack(side=tk.LEFT, padx=5)
         self.combo.pack(side=tk.LEFT, padx=5)
-        self.radio2.pack_forget()
-        self.input_text.pack_forget()
-        self.label2.pack_forget()
 
         worksheet_names = []
         self.radio1.select()
