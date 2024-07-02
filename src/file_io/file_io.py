@@ -12,7 +12,8 @@ class FileIO:
 
         while True:
             file_path = filedialog.askopenfilenames(initialdir=f'{os.getcwd()}', title='Merged File Selection Window',
-                                                    filetypes=[('ALL', '*.docx'),('ALL', '*.doc'),('ALL', '*.xlsx'),('ALL', '*.xls')])
+                                                    filetypes=[('ALL', '*.docx'), ('ALL', '*.doc'), ('ALL', '*.xlsx'),
+                                                               ('ALL', '*.xls'), ('ALL', '*.pdf')])
             if not file_path:
                 break
             for path in file_path:
