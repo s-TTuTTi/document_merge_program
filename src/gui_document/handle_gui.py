@@ -33,6 +33,7 @@ class Gui:
 
         self.input_files = []
         self.selected_pages = []
+        self.total_pages = []
         self.index = 0
 
     def initialize_ui(self):
@@ -50,7 +51,7 @@ class Gui:
     def create_left_frame(self):
         left_frame = tk.Frame(self.root, width=200)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=10, pady=10)
-
+        self.left_frame(left_frame)
         self.create_listbox(left_frame)
         self.create_labelframe(left_frame)
 
@@ -61,8 +62,14 @@ class Gui:
         self.create_buttons(right_frame)
         self.create_form(right_frame)
 
+    def create_option_button(self, parent):
+        option_button = tk.Button(self.root, text="")
+        option_button.pack(side=tk)
+
     def create_listbox(self, parent):
         self.listbox = tk.Listbox(parent, width=30, height=15, font=("Arial", 12), selectmode=SINGLE)
+        self.listbox.config(selectmode=MULTIPLE)
+
         self.listbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
     def create_labelframe(self, parent):
@@ -98,18 +105,25 @@ class Gui:
     def create_form(self, parent):
         form_frame = tk.Frame(parent)
         form_frame.pack(side=tk.TOP, pady=10)
+
+        lbl_pjt = tk.Label(form_frame, text="PJT No:", font=("Arial", 12))
+        self.entry_pjt = tk.Entry(form_frame, width=30, font=("Arial", 12))
+
         lbl_title = tk.Label(form_frame, text="문서명:", font=("Arial", 12))
         self.entry_title = tk.Entry(form_frame, width=30, font=("Arial", 12))
         lbl_department = tk.Label(form_frame, text="부서명:", font=("Arial", 12))
         self.entry_department = tk.Entry(form_frame, width=30, font=("Arial", 12))
         lbl_responsible = tk.Label(form_frame, text="담당자:", font=("Arial", 12))
         self.entry_responsible = tk.Entry(form_frame, width=30, font=("Arial", 12))
-        lbl_title.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-        self.entry_title.grid(row=0, column=1, padx=5, pady=5)
-        lbl_department.grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
-        self.entry_department.grid(row=1, column=1, padx=5, pady=5)
-        lbl_responsible.grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
-        self.entry_responsible.grid(row=2, column=1, padx=5, pady=5)
+
+        lbl_pjt.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        self.entry_pjt.grid(row=0, column=1, padx=5, pady=5)
+        lbl_title.grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        self.entry_title.grid(row=1, column=1, padx=5, pady=5)
+        lbl_department.grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        self.entry_department.grid(row=2, column=1, padx=5, pady=5)
+        lbl_responsible.grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
+        self.entry_responsible.grid(row=3, column=1, padx=5, pady=5)
 
     def exit_window_x(self):
         print("프로그램이 종료됩니다.")
@@ -147,6 +161,7 @@ class Gui:
         return [x - 1 for x in arr]
 
     def convert_to_pdf(self, input_file, output_file, selected_page):
+
         if input_file.endswith('.doc') or input_file.endswith('.docx'):
             self.to_pdf_converter.word2pdf(input_file, output_file)
 
@@ -154,6 +169,7 @@ class Gui:
                 page_array = self.parse_num_ranges(selected_page)
                 decremented_array = self.decrement_array(page_array)
                 self.pdf_handler.extract_page(output_file, decremented_array, output_file)
+
         elif input_file.endswith('.pdf'):
             if selected_page != 0:
                 page_array = self.parse_num_ranges(selected_page)
@@ -161,6 +177,7 @@ class Gui:
                 self.pdf_handler.extract_page(input_file, decremented_array, output_file)
             else:
                 shutil.copyfile(input_file, output_file)
+
         elif input_file.endswith('.xls') or input_file.endswith('.xlsx'):
             if selected_page != 0:
                 self.to_pdf_converter.excel2pdf(input_file, output_file, selected_page)
@@ -202,14 +219,16 @@ class Gui:
         return files_page_num
 
     def create_cover_and_index_pages(self, temp_dir, file_names_without_ext, files_page_num):
+        pjt_no = self.entry_pjt.get()
         title = self.entry_title.get()
         dept_name = self.entry_department.get()
         person_name = self.entry_responsible.get()
 
+
         cover_page_docx_path = os.path.join(temp_dir, "cover_page.docx")
         index_page_docx_path = os.path.join(temp_dir, "index_page.docx")
 
-        self.word_handler.create_cover_page(title, dept_name, person_name, cover_page_docx_path)
+        self.word_handler.create_cover_page(title, pjt_no, dept_name, person_name, cover_page_docx_path)
         self.word_handler.create_index_page(file_names_without_ext, files_page_num, index_page_docx_path)
 
         cover_page_pdf_path = os.path.join(temp_dir, "cover_page.pdf")
@@ -309,15 +328,13 @@ class Gui:
                 self.input_files.append(file)
                 self.listbox.insert(END, os.path.basename(file))
                 new_files_count += 1
-            else:
-                self.warning_msg(
-                    f"Only \".docx\", \".doc\", \".xlsx\", \".xls\", \".pdf\" files supported\nUnsupported file format : {os.path.basename(file)}")
 
         if self.selected_pages:
             self.selected_pages.extend([0] * new_files_count)
+            self.total_pages.extend([0] * new_files_count)
         else:
             self.selected_pages = [0] * len(self.input_files)
-
+            self.total_pages = [0] * len(self.input_files)
     def btn_delete_click(self):
         selected_items = self.listbox.curselection()
         if askokcancel("Delete", f"Are you sure you want to delete it?"):
@@ -420,8 +437,10 @@ class Gui:
         selected_item, index = self.get_selected_item_and_index()
         if selected_item or (index is not None and int(index) > -1):
             self.index = index
-            print(selected_item)
+
+            print(f"Current cursor document : {selected_item}")
             print(f"Current cursor position : {index}")
+
 
             self.radio1.pack_forget()
             self.radio2.pack_forget()

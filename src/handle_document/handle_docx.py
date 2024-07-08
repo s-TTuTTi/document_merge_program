@@ -1,13 +1,32 @@
 from docx import Document
 from docx.shared import Inches, Cm
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+import zipfile
+import re
+
+import win32com.client
 
 class WordHandler():
     def __init__(self):
         pass
 
     @staticmethod
-    def create_cover_page(doc_name, dept_name, person_name, output_file):
+    def extract_page_num(file_name):
+        if file_name.endswith('.docx'):
+            with zipfile.ZipFile(file_name) as docx_object:
+                docx_property_file_data = docx_object.read('docProps/app.xml').decode()
+                page_num = re.search(r"<Pages>(\d+)</Pages>", docx_property_file_data).group(1)
+        elif file_name.endswith('.doc'):
+            app = win32com.client.Dispatch('Word.Application')
+            doc = app.Documents.Open(file_name)
+            page_num = len(doc.ActiveDocument.Pages)
+        else:
+            page_num = 0
+        print(str(file_name) + "'s Page Number: " + str(page_num))
+        return int(page_num)
+
+    @staticmethod
+    def create_cover_page(doc_name, pjt_no, dept_name, person_name, output_file):
         document = Document()
 
         # 문서 제목 추가
@@ -15,6 +34,12 @@ class WordHandler():
 
         # 빈 줄 추가
         document.add_paragraph('')
+
+        # 프로젝트 넘버 추가
+        department = document.add_paragraph()
+        department_run = department.add_run('Project No: ')
+        department_run.bold = True
+        department.add_run(pjt_no)
 
         # 담당 부서 추가
         department = document.add_paragraph()
@@ -87,8 +112,5 @@ class WordHandler():
         document.save(output_file)
 
 if __name__ == '__main__':
-    WordHandler.create_cover_page('문서 병합 결과', '개발팀', '홍길동', 'cover_page.docx')
-
-    files_pages = (3, 7, 15)
-    files_description = ('Sample C_01.pdf', 'Sample C_02.pdf', 'Sample C_03.pdf')
-    WordHandler.create_index_page(files_description, files_pages, 'index_page.docx')
+    page_num = WordHandler.get_page_num("소프트웨어 설계서.docx")
+    print(page_num)

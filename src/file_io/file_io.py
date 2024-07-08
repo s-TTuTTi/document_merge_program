@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 
+
 class FileIO:
     def __init__(self):
         self.root = tk.Tk()
@@ -18,9 +19,9 @@ class FileIO:
                 break
             for path in file_path:
                 file_paths.append(path)
-                print(path)
+                print(f"Load file : {path}")
 
-        print(f"file_pathsss : {file_paths}")
+        print(f" A total of {len(file_paths)} files will be loaded")
 
         return file_paths
 
