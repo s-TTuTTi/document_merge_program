@@ -70,12 +70,17 @@ class PdfHandler():
     @staticmethod
     def extract_page_num(input_file):
         pdf_reader = PyPDF2.PdfReader(input_file)
-
+        if pdf_reader.is_encrypted:
+            try:
+                pdf_reader('')
+            except Exception as e:
+                return -5
         return len(pdf_reader.pages)
 
     @staticmethod
     def extract_page(input_file, selected_page, output_file):
         pdf_reader = PyPDF2.PdfReader(input_file)
+
         pdf_writer = PyPDF2.PdfWriter()
 
         for page_num in selected_page:

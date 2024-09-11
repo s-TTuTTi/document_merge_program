@@ -51,7 +51,7 @@ class Gui:
     def create_left_frame(self):
         left_frame = tk.Frame(self.root, width=200)
         left_frame.pack(side=tk.LEFT, fill=tk.BOTH, padx=10, pady=10)
-        self.left_frame(left_frame)
+        #self.left_frame(left_frame)
         self.create_listbox(left_frame)
         self.create_labelframe(left_frame)
 
@@ -68,7 +68,7 @@ class Gui:
 
     def create_listbox(self, parent):
         self.listbox = tk.Listbox(parent, width=30, height=15, font=("Arial", 12), selectmode=SINGLE)
-        self.listbox.config(selectmode=MULTIPLE)
+        self.listbox.config(selectmode=SINGLE)
 
         self.listbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 

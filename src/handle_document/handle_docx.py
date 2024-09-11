@@ -12,17 +12,24 @@ class WordHandler():
 
     @staticmethod
     def extract_page_num(file_name):
-        if file_name.endswith('.docx'):
-            with zipfile.ZipFile(file_name) as docx_object:
-                docx_property_file_data = docx_object.read('docProps/app.xml').decode()
-                page_num = re.search(r"<Pages>(\d+)</Pages>", docx_property_file_data).group(1)
-        elif file_name.endswith('.doc'):
-            app = win32com.client.Dispatch('Word.Application')
-            doc = app.Documents.Open(file_name)
-            page_num = len(doc.ActiveDocument.Pages)
-        else:
-            page_num = 0
-        print(str(file_name) + "'s Page Number: " + str(page_num))
+        escaped_path = file_name.replace("/", "\\")
+        page_num = 0
+        try:
+            if escaped_path.endswith('.docx'):
+                with zipfile.ZipFile(escaped_path) as docx_object:
+                    docx_property_file_data = docx_object.read('docProps/app.xml').decode()
+                    page_num = re.search(r"<Pages>(\d+)</Pages>", docx_property_file_data).group(1)
+            elif escaped_path.endswith('.doc'):
+                app = win32com.client.Dispatch('Word.Application')
+                doc = app.Documents.Open(escaped_path)
+                page_num = len(doc.ActiveWindow.ActivePane.Pages)
+
+                doc.Close(False)
+                app.Quit()
+        except Exception as e:
+            print(f"Error extracting page number from {file_name}: {e}")
+
+        print(f"{file_name}'s Page Number: {page_num}")
         return int(page_num)
 
     @staticmethod
