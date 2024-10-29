@@ -1,14 +1,9 @@
 
 import shutil, tempfile
 import os, re, sys
-
-import comtypes
-import comtypes.client
-
-import src.gui_document.handle_gui as handle_gui
+sys.coinit_flags = 0
 import src.file_io.file_io as file_io
 import src.convert_document.convert_to_pdf as convert_to_pdf
-
 from PyQt5.QtCore import Qt, QTimer, QRect
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
@@ -410,16 +405,20 @@ class MyWindow(QMainWindow, UI_main):
         print(f"** Row: {row+1} clicked ** ")
         print("Number of pages set : ", self.selected_pages)
         print("Total number of pages updated : ",self.total_pages)
-        print("self.input_files : ",self.input_files)
-
 
         item = self.tableWidget.item(row, 1)
         if item is not None:
             value = item.text()
             label_string = f'{row + 1} : {value}'
             self.set_info(label_string)
+            # CheckBox TRUE ::
+            cell_widget = self.tableWidget.cellWidget(row, 0)
+            checkbox = cell_widget.findChild(QCheckBox)
+            if checkbox:
+                checkbox.setChecked(True)
         else:
             print("No item at the clicked position")
+
 
     def table_widget_doubleClick(self, row):
         self.currently_row = row
@@ -553,29 +552,63 @@ class MyWindow(QMainWindow, UI_main):
             self.set_info("Input WorkSheet : {}".format(input_worksheet))
             print(f"Currently set information : {self.selected_pages}")
 
-    # ============================================================================================== QButton-five ========
+# ============================================================================================== QButton-five ========
     # Button-five
     def btn_move_setting(self):
+        # CheckBox 여러 개 체크가 되면 이동하지 않음 (한 개만 선택되야 이동)
         self.btn_top.released.connect(
             lambda: self.btn_top_click(self.input_files, self.selected_pages,self.total_pages,self.check_box))
         self.btn_up.released.connect(lambda: self.btn_up_click( self.input_files, self.selected_pages, self.total_pages,self.check_box))
         self.btn_down.released.connect(lambda: self.btn_down_click( self.input_files, self.selected_pages,self.total_pages,self.check_box))
         self.btn_bottom.released.connect(lambda: self.btn_bottom_click( self.input_files, self.selected_pages,self.total_pages,self.check_box))
         self.btn_delete.released.connect(lambda: self.btn_delete_click(self.input_files, self.selected_pages,self.total_pages,self.check_box))
+        self.all_chbox.stateChanged.connect(self.checking_checkbox)
 
-    # 1. Top =========================================================
-    def btn_top_click(self, *lists):
-        row = self.currently_row
-        check_num = 0
+    def checking_checkbox(self):
+        if self.all_chbox.isChecked():
+            self.set_info("All-select")
+            for r in range(self.tableWidget.rowCount()):
+                checkbox = self.tableWidget.cellWidget(r,0).findChild(QCheckBox)
+                checkbox.setChecked(True)
+        else:
+            self.set_info("All-cancel")
+            for r in range(self.tableWidget.rowCount()):
+                checkbox = self.tableWidget.cellWidget(r,0).findChild(QCheckBox)
+                checkbox.setChecked(False)
+    def checkup_checkbox(self):
+        check_total_num = 0
+        checked_checkbox = None
+        row = 0
+        checked_row_list = []
+
         for r in range(self.tableWidget.rowCount()):
-            cell_widget = self.tableWidget.cellWidget(r, 0)
-            checkbox = cell_widget.findChild(QCheckBox)  # QCheckBox를 찾습니다.
-            if checkbox and checkbox.isChecked():
-                checkbox.setChecked(False)  # 체크를 취소합니다.
-                check_num += 1
+            checkbox = self.tableWidget.cellWidget(r,0).findChild(QCheckBox)
+            if checkbox.isChecked(): # 체크된 수 확인
+                check_total_num +=1
+                checked_checkbox = checkbox
+                row = r
+                print("TOTAL NUM : ",check_total_num)
+                checked_row_list.append(row)
+            if check_total_num > 1: # 여러 개를 택하면 이동 불가능
+                break
 
-        if check_num > 0:
-            self.critical_event("The check box is valid only when you delete it")
+        if check_total_num > 1: # 여러 개를 택하면 이동 불가능
+            self.critical_event("To move, select only one check box")
+            return -1
+        elif check_total_num == 1: # 하나의 문서만 선택했을 경우 (체크박스 이동을 위해)
+            checked_checkbox.setChecked(False)
+            return row
+        else: # 사용자가 아무것도 선택하지 않았을 때
+            self.set_info("Select one document to move")
+            self.critical_event("Select one document to move")
+            return 0
+
+
+# 1. Top =========================================================
+    def btn_top_click(self, *lists):
+        row = self.checkup_checkbox()
+        if row < 0:
+            return
 
         for lst in lists:
             lst.insert(0, lst.pop(row))
@@ -593,26 +626,20 @@ class MyWindow(QMainWindow, UI_main):
         # 현재 값을 맨 위로 이동
         for col in range(4):
             self.tableWidget.setItem(0, col, QTableWidgetItem(current_items[col]))
+        # 활성화된 체크박스도 함께 이동
+        checkbox = self.tableWidget.cellWidget(0,0).findChild(QCheckBox)
+        checkbox.setChecked(True)
 
-    # 2. Up =========================================================
+# 2. Up =========================================================
     def btn_up_click(self, *lists):
-        row = self.currently_row
-        check_num = 0
-        for r in range(self.tableWidget.rowCount()):
-            cell_widget = self.tableWidget.cellWidget(r, 0)
-            checkbox = cell_widget.findChild(QCheckBox)  # QCheckBox를 찾습니다.
-            if checkbox and checkbox.isChecked():
-                checkbox.setChecked(False)  # 체크를 취소합니다.
-                check_num += 1
-
-        if check_num > 0:
-            self.critical_event("The check box is valid only when you delete it")
-        elif row == 0:
-            self.set_info("Current top value",1)
+        row = self.checkup_checkbox()
+        if row < 0:
             return
 
         for lst in lists:
             lst.insert(row-1, lst.pop(row))
+            if row == 0:
+                return
 
         current_row_items = [self.tableWidget.item(row, col).text()
                              if self.tableWidget.item(row, col) else "" for col in range(4)]
@@ -622,23 +649,19 @@ class MyWindow(QMainWindow, UI_main):
         for col in range(4):
             self.tableWidget.setItem(row, col, QTableWidgetItem(above_row_items[col]))
             self.tableWidget.setItem(row - 1, col, QTableWidgetItem(current_row_items[col]))
+        # 활성화된 체크박스도 함께 이동
+        checkbox = self.tableWidget.cellWidget(row-1, 0).findChild(QCheckBox)
+        checkbox.setChecked(True)
 
-    # 3. Down =========================================================
+# 3. Down =========================================================
     def btn_down_click(self, *lists):
-        row = self.currently_row
-        check_num = 0
-        for r in range(self.tableWidget.rowCount()):
-            cell_widget = self.tableWidget.cellWidget(r, 0)
-            checkbox = cell_widget.findChild(QCheckBox)  # QCheckBox를 찾습니다.
-            if checkbox and checkbox.isChecked():
-                checkbox.setChecked(False)  # 체크를 취소합니다.
-                check_num += 1
-
-        if check_num > 0:
-            self.critical_event("The check box is valid only when you delete it")
-        elif row == self.tableWidget.rowCount() - 1:
-            self.set_info("Current Lowest value",1)
+        row = self.checkup_checkbox()
+        last_row = self.tableWidget.rowCount() - 1
+        if row < 0:
             return
+        elif last_row == row:
+            return
+
         for lst in lists:
             lst.insert(row + 1, lst.pop(row))
 
@@ -651,20 +674,16 @@ class MyWindow(QMainWindow, UI_main):
             self.tableWidget.setItem(row, col, QTableWidgetItem(below_row_items[col]))
             self.tableWidget.setItem(row + 1, col, QTableWidgetItem(current_row_items[col]))
 
-    # 4. Bottom =========================================================
+        # 활성화된 체크박스도 함께 이동
+        checkbox = self.tableWidget.cellWidget(row+1, 0).findChild(QCheckBox)
+        checkbox.setChecked(True)
+
+# 4. Bottom =========================================================
     def btn_bottom_click(self, *lists):
-        row = self.currently_row
-
-        check_num = 0
-        for r in range(self.tableWidget.rowCount()):
-            cell_widget = self.tableWidget.cellWidget(r, 0)
-            checkbox = cell_widget.findChild(QCheckBox)  # QCheckBox를 찾습니다.
-            if checkbox and checkbox.isChecked():
-                checkbox.setChecked(False)  # 체크를 취소합니다.
-                check_num += 1
-
-        if check_num > 0:
-            self.critical_event("The check box is valid only when you delete it")
+        row = self.checkup_checkbox()
+        if row < 0:
+            print("ERROR")
+            return
 
         for lst in lists:
             if row in lst:
@@ -685,7 +704,11 @@ class MyWindow(QMainWindow, UI_main):
         for col in range(4):
             self.tableWidget.setItem(last_row, col, QTableWidgetItem(current_items[col]))
 
-    # 5. Delete =========================================================
+        # 활성화된 체크박스도 함께 이동
+        checkbox = self.tableWidget.cellWidget(last_row,0).findChild(QCheckBox)
+        checkbox.setChecked(True)
+
+# 5. Delete =========================================================
     def btn_delete_click(self, *lists):
         row = self.currently_row
         row_to_delete = []
@@ -708,24 +731,12 @@ class MyWindow(QMainWindow, UI_main):
 
             return
 
-        # Check 상태가 아예 없을 경우, 현재 선택된 행만 삭제
-        for lst in lists:
-            lst.pop(row)
 
-        for i in range(row + 1, self.tableWidget.rowCount()):
-            for col in range(4):
-                item_text = self.tableWidget.item(i, col).text() if self.tableWidget.item(i, col) else ""
-                self.tableWidget.setItem(i - 1, col, QTableWidgetItem(item_text))
-        last_row = self.tableWidget.rowCount() - 1
-        for col in range(4):
-            self.tableWidget.setItem(last_row, col, QTableWidgetItem(""))
-        self.tableWidget.setRowCount(len(self.input_files))
-
-    # ============================================================================================== QMessageBox ========
+# ============================================================================================== QMessageBox ========
     #QMessageBox
     def critical_event(self, msg) :
         QMessageBox.critical(self,'Critical',msg)
-    # ============================================================================================== QLabel ========
+# ============================================================================================== QLabel ========
     #QLabel
     def set_info(self, msg, state = 0):
         if state == 1:
